@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import logo from "../../assets/logo.png";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -8,6 +9,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [emptyFilled, setEmptyFilled] = useState("");
   const [emptyFilledEmail, setEmptyFilledEmail] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +30,8 @@ const Login = () => {
       })
       .then((response) => {
         console.log(response);
-        console.log(response.data.message);
+
+        navigate("/dashboard", { replace: true });
       })
       .catch((err) => {
         console.log(err);
