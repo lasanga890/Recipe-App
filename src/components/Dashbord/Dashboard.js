@@ -1,91 +1,120 @@
 import React, { useEffect, useState } from "react";
-import logo from "../../assets/logo.png";
-import { GoSignOut } from "react-icons/go";
+
 import axios from "axios";
+
+import Navbar from "../Navbar";
+import RecipeCard from "../RecipeCard";
+
+const baseUrl = "http://localhost:8080";
 
 const Dashboard = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("Beef");
   const [recipes, setRecipes] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     const fetchCategories = async () => {
-      await axios
-        .get("https://www.themealdb.com/api/json/v1/1/categories.php")
-        .then((resp) => {
-          setCategories(resp.data.categories);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
+      setIsLoading(true);
+      try {
+        const resp = await axios.get(`${baseUrl}/api/recipes/get-categories`);
+        setCategories(resp.data.categories);
+        setIsLoading(false);
+      } catch (err) {
+        console.log(err);
+        setIsLoading(false);
+      }
     };
 
     const fetchRecipe = async () => {
-      await axios
-        .get(
+      setIsLoading(true);
+      try {
+        const resp = await axios.get(
           `https://www.themealdb.com/api/json/v1/1/filter.php?c=${selectedCategory}`
-        )
-        .then((resp) => {
-          setRecipes(resp.data.meals);
-          console.log(resp.data.meals);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
+        );
+        setRecipes(resp.data.meals);
+        setIsLoading(false);
+      } catch (err) {
+        console.log(err);
+        setIsLoading(false);
+      }
     };
+
+    const fetchFavorites = async () => {
+      const token = localStorage.getItem("token");
+      setIsLoading(true);
+      try {
+        const resp = await axios.get(`${baseUrl}/api/favourite/get`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Verify the response and format it to an array of recipe IDs
+        const favoriteIds = resp.data.data.flat().map((fav) => fav.idMeal);
+
+        setFavorites(favoriteIds);
+        setIsLoading(false);
+      } catch (err) {
+        console.log(err);
+        setIsLoading(false);
+      }
+    };
+
     fetchCategories();
     fetchRecipe();
+    fetchFavorites();
   }, [selectedCategory]);
 
-  console.log(categories);
+  const addToFavorites = async (recipeId) => {
+    const token = localStorage.getItem("token");
+    setIsLoading(true);
+    try {
+      await axios.post(
+        `${baseUrl}/api/favourite/add`,
+        { recipeId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setFavorites((prevFavorites) => [...prevFavorites, recipeId]);
+      setIsLoading(false);
+    } catch (err) {
+      console.log(err);
+      setIsLoading(false);
+    }
+  };
+
+  const removeFromFavorites = async (recipeId) => {
+    const token = localStorage.getItem("token");
+    setIsLoading(true);
+    try {
+      await axios.post(
+        `${baseUrl}/api/favourite/remove`,
+        { recipeId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setFavorites((prev) => prev.filter((id) => id !== recipeId));
+      setIsLoading(false);
+    } catch (err) {
+      console.log(err);
+      setIsLoading(false);
+    }
+  };
+
+  const toggleFavorite = (recipeId) => {
+    if (favorites.includes(recipeId)) {
+      removeFromFavorites(recipeId);
+    } else {
+      addToFavorites(recipeId);
+    }
+  };
+
   return (
     <>
-      <nav
-        className="relative flex w-full flex-nowrap items-center justify-between bg-white py-2 shadow-dark-mild dark:bg-neutral-700 lg:flex-wrap lg:justify-start lg:py-2"
-        data-twe-navbar-ref
-      >
-        <div className="flex w-full flex-wrap items-center justify-between px-24">
-          <img src={logo} alt="logo" width={"10%"} />
-          <div className=" flex-grow basis-[100%] items-center justify-center lg:mt-0 lg:!flex lg:basis-auto">
-            {/* Left links */}
-            <ul className="list-style-none flex flex-col ps-0  lg:flex-row">
-              <li className="  lg:my-0 px-5">
-                <a
-                  className="text-black dark:text-white "
-                  aria-current="page"
-                  href="#"
-                  data-twe-nav-link-ref
-                >
-                  Home
-                </a>
-              </li>
-              <li
-                className="my-4 ps-2 lg:my-0 lg:pe-1 lg:ps-2 px-5"
-                data-twe-nav-item-ref
-              >
-                <a
-                  className="text-black dark:text-white lg:px-2"
-                  aria-current="page"
-                  href="#"
-                  data-twe-nav-link-ref
-                >
-                  Favourite
-                </a>
-              </li>
-            </ul>
-          </div>
-          <div className="text-end mr-4">
-            <a href="">
-              {" "}
-              <GoSignOut size={"2rem"} />
-            </a>
-          </div>
-        </div>
-      </nav>
+      <Navbar currentPage={"home"} />
 
-      <div className="flex gap-4 w-[100%] flex-wrap justify-center mt-4 mb-8 ">
-        {categories.map((category, index) => (
+      <div className="flex gap-4 w-[100%] flex-wrap justify-center mt-4 mb-8">
+        {categories.slice(0, 5).map((category) => (
           <button
-            key={index}
+            key={category.idCategory}
             onClick={() => setSelectedCategory(category.strCategory)}
             className={`px-4 py-2 rounded-full border ${
               selectedCategory === category.strCategory
@@ -98,27 +127,45 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Recipe Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 ">
-        {recipes.map((recipe, index) => (
-          <div className="flex flex-col items-center ">
-            <div className="w-48 h-48 bg-gray-200 rounded-2xl mb-4">
-              <img
-                src={recipe.strMealThumb}
-                alt="mealPhoto"
-                className="rounded-2xl"
-              />
-            </div>
-            <div className="text-sm text-gray-600" key={index}>
-              {recipe.strMeal}
-            </div>
-            <div className="text-gray-500 ">&#9825;</div>
-            <h3 className="mt-2 font-semibold text-gray-800">
-              {selectedCategory}
-            </h3>
-          </div>
+      <div className="grid md:grid-cols-4 gap-6">
+        {recipes.map((recipe) => (
+          <RecipeCard
+            key={recipe.idMeal}
+            recipe={recipe}
+            selectedCategory={selectedCategory}
+            isFavorite={favorites.includes(recipe.idMeal)}
+            toggleFavorite={toggleFavorite}
+          />
         ))}
       </div>
+      {isLoading && (
+        <div className="flex items-center justify-center min-h-screen">
+          <button
+            disabled
+            type="button"
+            class=" py-2.5 px-5 me-2 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700 inline-flex items-center"
+          >
+            <svg
+              aria-hidden="true"
+              role="status"
+              class="inline w-4 h-4 me-3 text-gray-200 animate-spin dark:text-gray-600"
+              viewBox="0 0 100 101"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+                fill="currentColor"
+              />
+              <path
+                d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+                fill="#1C64F2"
+              />
+            </svg>
+            Loading...
+          </button>
+        </div>
+      )}
     </>
   );
 };
