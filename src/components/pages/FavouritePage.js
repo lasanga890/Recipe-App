@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import RecipeCard from "../RecipeCard.js";
 import Navbar from "./../Navbar";
@@ -10,7 +10,8 @@ const Favorites = () => {
   const [recipes, setRecipes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchRecipes = async () => {
+  // Memoize fetchRecipes to avoid dependency issues
+  const fetchRecipes = useCallback(async () => {
     if (favorites.length === 0) {
       setRecipes([]);
       return;
@@ -26,7 +27,7 @@ const Favorites = () => {
       .filter(Boolean);
 
     setRecipes(flattenedRecipes);
-  };
+  }, [favorites]);
 
   useEffect(() => {
     const fetchFavorites = async () => {
@@ -37,9 +38,9 @@ const Favorites = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setFavorites(resp.data.data.map((fav) => fav[0].idMeal) || []);
-        setIsLoading(false);
       } catch (err) {
-        console.log(err);
+        console.error(err);
+      } finally {
         setIsLoading(false);
       }
     };
@@ -49,44 +50,34 @@ const Favorites = () => {
 
   useEffect(() => {
     fetchRecipes();
-  }, [favorites, fetchRecipes]);
+  }, [fetchRecipes]);
 
   const toggleFavorite = async (recipeId) => {
     setIsLoading(true);
     const token = localStorage.getItem("token");
-    if (favorites.includes(recipeId)) {
-      try {
+
+    try {
+      if (favorites.includes(recipeId)) {
         await axios.post(
           `${baseUrl}/api/favourite/remove`,
           { recipeId },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setFavorites((prevFavorites) =>
           prevFavorites.filter((id) => id !== recipeId)
         );
-        setIsLoading(false);
-      } catch (err) {
-        console.log("Failed to remove from favorites:", err);
-        setIsLoading(false);
-      }
-    } else {
-      try {
-        setIsLoading(true);
+      } else {
         await axios.post(
           `${baseUrl}/api/favourite/add`,
           { recipeId },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setFavorites((prevFavorites) => [...prevFavorites, recipeId]);
-        setIsLoading(false);
-      } catch (err) {
-        console.log("Failed to add to favorites:", err);
-        setIsLoading(false);
       }
+    } catch (err) {
+      console.error("Failed to update favorites:", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -94,28 +85,27 @@ const Favorites = () => {
     <>
       <Navbar currentPage={"favourite"} />
       <div className="grid md:grid-cols-4 gap-6 mt-10">
-        {recipes &&
-          recipes.map((recipe) => (
-            <RecipeCard
-              key={recipe.idMeal}
-              recipe={recipe}
-              selectedCategory={recipe.strCategory || ""}
-              isFavorite={favorites.includes(recipe.idMeal)}
-              toggleFavorite={toggleFavorite}
-            />
-          ))}
+        {recipes.map((recipe) => (
+          <RecipeCard
+            key={recipe.idMeal}
+            recipe={recipe}
+            selectedCategory={recipe.strCategory || ""}
+            isFavorite={favorites.includes(recipe.idMeal)}
+            toggleFavorite={toggleFavorite}
+          />
+        ))}
       </div>
       {isLoading && (
         <div className="flex items-center justify-center h-10">
           <button
             disabled
             type="button"
-            class=" py-2.5 px-5 me-2 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700 inline-flex items-center"
+            className="py-2.5 px-5 me-2 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700 inline-flex items-center"
           >
             <svg
               aria-hidden="true"
               role="status"
-              class="inline w-4 h-4 me-3 text-gray-200 animate-spin dark:text-gray-600"
+              className="inline w-4 h-4 me-3 text-gray-200 animate-spin dark:text-gray-600"
               viewBox="0 0 100 101"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
