@@ -49,7 +49,7 @@ const Favorites = () => {
 
   useEffect(() => {
     fetchRecipes();
-  }, [favorites]);
+  }, [favorites, fetchRecipes]);
 
   const toggleFavorite = async (recipeId) => {
     setIsLoading(true);
