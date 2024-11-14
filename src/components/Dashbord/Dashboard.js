@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
-
 import axios from "axios";
-
 import Navbar from "../Navbar";
 import RecipeCard from "../RecipeCard";
 
-const baseUrl = "http://localhost:8080";
+const baseUrl = process.env.REACT_APP_BACKEND_URL;
 
 const Dashboard = () => {
   const [categories, setCategories] = useState([]);
@@ -49,7 +47,6 @@ const Dashboard = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        // Verify the response and format it to an array of recipe IDs
         const favoriteIds = resp.data.data.flat().map((fav) => fav.idMeal);
 
         setFavorites(favoriteIds);
@@ -139,7 +136,7 @@ const Dashboard = () => {
         ))}
       </div>
       {isLoading && (
-        <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center justify-center h-10">
           <button
             disabled
             type="button"

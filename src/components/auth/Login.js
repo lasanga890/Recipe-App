@@ -12,6 +12,8 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  const baseUrl = process.env.REACT_APP_BACKEND_URL;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setEmptyFilled("");
@@ -25,7 +27,7 @@ const Login = () => {
     }
 
     await axios
-      .post("http://localhost:8080/api/user/login", {
+      .post(`${baseUrl}/api/user/login`, {
         email,
         password,
       })

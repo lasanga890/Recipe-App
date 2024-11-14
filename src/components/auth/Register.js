@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import logo from "../../assets/logo.png";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
   const [firstName, setFirstName] = useState("");
@@ -10,6 +11,8 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [conformPassword, setConformPassword] = useState("");
   const [passwordMatch, setPasswordMatch] = useState(true);
+  const navigate = useNavigate();
+  const baseUrl = process.env.REACT_APP_BACKEND_URL;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +20,7 @@ const Register = () => {
       setPasswordMatch(false);
     } else {
       await axios
-        .post("http://localhost:8080/api/user/register", {
+        .post(`${baseUrl}/api/user/register`, {
           firstName,
           lastName,
           email,
@@ -26,7 +29,7 @@ const Register = () => {
           conformPassword,
         })
         .then((response) => {
-          console.log(response.data);
+          navigate("/", { replace: true });
         })
         .catch(() => {
           console.log("error");
